@@ -1,0 +1,24 @@
+{
+  "name": "@recalibratedsystems/messagepack",
+  "version": "1.0.0",
+  "description": "MessagePack serializer",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "ateos shani"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/overphoenix/messagepack.git"
+  },
+  "author": "ATEOS team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/overphoenix/messagepack/issues"
+  },
+  "homepage": "https://github.com/overphoenix/messagepack#readme",
+  "dependencies": {
+    "@recalibratedsystems/common": "^0.1.15",
+    "@recalibratedsystems/smartbuffer": "^1.0.3",
+    "long": "^5.2.0"
+  }
+}
