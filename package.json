@@ -4,6 +4,7 @@
   "description": "MessagePack serializer",
   "main": "lib/index.js",
   "scripts": {
+    "build": "ateos build",
     "test": "ateos shani"
   },
   "repository": {
