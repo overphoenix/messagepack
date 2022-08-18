@@ -1,25 +1,26 @@
+import { entries } from "@recalibratedsystems/common/entries";
 import { NotSupportedException, IncompleteBufferError } from "@recalibratedsystems/common/error";
-import {  Serializer, serializer } from "../lib";
-import * as Long from "long";
+import { Serializer, serializer } from "../lib";
+import Long from "long";
 import * as fs from "fs";
 import * as path from "path";
-import SmartBuffer from "@recalibratedsystems/smartbuffer";
+import { SmartBuffer } from "@recalibratedsystems/smartbuffer";
 
 describe("Serializer", () => {
   it("encode/decode booleans", () => {
     let input = true;
     let encoded = serializer.encode(input);
     let output = serializer.decode(encoded);
-    assert.strictEqual(input, output);
+    expect(input).toEqual(output);
 
     input = false;
     encoded = serializer.encode(input);
     output = serializer.decode(encoded);
-    assert.strictEqual(input, output);
+    expect(input).toEqual(output);
   });
 
   describe("1-byte-length-buffers", () => {
-    const build = function (size) {
+    const build = function (size: number): Buffer {
       const buf = Buffer.allocUnsafe(size);
       buf.fill("a");
 
@@ -27,7 +28,7 @@ describe("Serializer", () => {
     };
 
     describe("encode/decode 2^8-1 bytes buffers", () => {
-      const all = [];
+      const all: Buffer[] = [];
 
       all.push(build(Math.pow(2, 8) - 1));
       all.push(build(Math.pow(2, 6) + 1));
@@ -39,7 +40,7 @@ describe("Serializer", () => {
           const input = orig;
           const encoded = serializer.encode(input);
           const output = serializer.decode(encoded);
-          assert.equal(Buffer.compare(output, input), 0);
+          expect(Buffer.compare(output, input)).toEqual(0);
           // assert.equal(serializer.decode(serializer.encode(orig)).toString(), orig.toString(), 'must stay the same')
         });
       });
@@ -51,31 +52,31 @@ describe("Serializer", () => {
       buf[0] = 0xc4;
       buf[1] = Math.pow(2, 8) - 1; // set bigger size
       orig.copy(buf, 2);
-      buf = SmartBuffer.wrap(buf);
-      const origLength = buf.length;
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
-      assert.equal(buf.length, origLength - 2, "should consume two bytes");
+      const sbuf = SmartBuffer.wrap(buf);
+      const origLength = sbuf.length;
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(sbuf.length).toEqual(origLength - 2);
     });
 
     it("decoding an incomplete header of 2^8-1 bytes buffer", () => {
       let buf = Buffer.allocUnsafe(1);
       buf[0] = 0xc4;
-      buf = SmartBuffer.wrap(buf);
-      const origLength = buf.length;
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
-      assert.equal(buf.length, origLength - 1, "should consume one byte");
+      const sbuf = SmartBuffer.wrap(buf);
+      const origLength = sbuf.length;
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(sbuf.length).toEqual(origLength - 1);
     });
   });
 
   describe("1-byte-length-exts", () => {
     const serializer = new Serializer();
 
-    const MyType = function (size, value) {
+    const MyType = function (size: number, value: any) {
       this.value = value;
       this.size = size;
     };
 
-    const mytypeEncode = function (obj, resbuf) {
+    const mytypeEncode = function (obj: any, resbuf) {
       const buf = Buffer.allocUnsafe(obj.size);
       buf.fill(obj.value);
       resbuf.write(buf);
@@ -96,7 +97,7 @@ describe("Serializer", () => {
     serializer.register(0x42, MyType, mytypeEncode, mytypeDecode);
 
     it("encode/decode variable ext data up to 0xff", () => {
-      const all = [];
+      const all: any[] = [];
 
       // no 1 as it's a fixext
       // no 2 as it's a fixext
@@ -121,7 +122,7 @@ describe("Serializer", () => {
       all.forEach((orig) => {
         const encoded = serializer.encode(orig);
         const output = serializer.decode(encoded);
-        assert.deepEqual(output, orig, `custom obj of length ${orig.size} must stay the same`);
+        expect(output).toEqual(orig);
       });
     });
 
@@ -132,21 +133,21 @@ describe("Serializer", () => {
       buf[0] = 0xc7;
       buf.writeUInt8(length + 2, 1); // set bigger size
       obj.buffer.copy(buf, 2, 2, length);
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
 
     it("decoding an incomplete header of variable ext data up to 0xff", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xc7;
-      buf = new SmartBuffer().write(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = new SmartBuffer().write(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("1-byte-length-strings", () => {
     it("encode/decode 32 <-> (2^8-1) bytes strings", () => {
-      const all = [];
+      const all: any[] = [];
       let i;
 
       // build base
@@ -159,7 +160,7 @@ describe("Serializer", () => {
       }
 
       all.forEach((str) => {
-        assert.equal(serializer.decode(serializer.encode(str)), str, `string of length ${str.length}`);
+        expect(serializer.decode(serializer.encode(str))).toEqual(str);
       });
     });
 
@@ -172,22 +173,22 @@ describe("Serializer", () => {
       buf[0] = 0xd9;
       buf[1] = Buffer.byteLength(str) + 10; // set bigger size
       buf.write(str, 2);
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
 
     it("decoding an incomplete header of a string", () => {
       let buf = Buffer.allocUnsafe(1);
       buf[0] = 0xd9;
-      buf = new SmartBuffer().write(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = new SmartBuffer().write(buf);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("2-bytes-length-arrays", () => {
 
     const build = function (size) {
-      const array = [];
+      const array: any[] = [];
       let i;
 
       for (i = 0; i < size; i++) {
@@ -198,7 +199,7 @@ describe("Serializer", () => {
     };
 
     it("encode/decode arrays up to 0xffff elements", () => {
-      const all = [];
+      const all: any[] = [];
       let i;
 
       for (i = 16; i < 0xffff; i += 4242) {
@@ -209,7 +210,7 @@ describe("Serializer", () => {
       all.push(build(0xffff));
 
       all.forEach((array) => {
-        assert.deepEqual(serializer.decode(serializer.encode(array)), array, `array of length ${array.length}`);
+        expect(serializer.decode(serializer.encode(array))).toEqual(array);
       });
     });
 
@@ -224,22 +225,22 @@ describe("Serializer", () => {
         obj.write(buf, pos);
         pos += obj.length;
       }
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
 
     it("decoding an incomplete header", () => {
       let buf = Buffer.alloc(2);
       buf[0] = 0xdc;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("2-bytes-length-exts", () => {
 
     it("encode/decode variable ext data up between 0x0100 and 0xffff", () => {
-      const all = [];
+      const all: any[] = [];
 
       const MyType = function (size, value) {
         this.value = value;
@@ -271,14 +272,14 @@ describe("Serializer", () => {
       all.push(new MyType(0xffff, "a"));
 
       all.forEach((orig) => {
-        assert.deepEqual(serializer.decode(serializer.encode(orig)), orig, `custom obj of length ${orig.size}`);
+        expect(serializer.decode(serializer.encode(orig))).toEqual(orig);
       });
     });
   });
 
   describe("2-bytes-length-strings", () => {
     it("encode/decode 2^8 <-> (2^16-1) bytes strings", () => {
-      const all = [];
+      const all: any[] = [];
       let str;
 
       str = Buffer.allocUnsafe(Math.pow(2, 8));
@@ -298,7 +299,7 @@ describe("Serializer", () => {
       all.push(str.toString());
 
       all.forEach((str) => {
-        assert.equal(serializer.decode(serializer.encode(str)), str, `string of length ${str.length}`);
+        expect(serializer.decode(serializer.encode(str))).toEqual(str);
       });
     });
 
@@ -311,15 +312,15 @@ describe("Serializer", () => {
       buf[0] = 0xda;
       buf.writeUInt16BE(Buffer.byteLength(str) + 10, 1); // set bigger size
       buf.write(str, 3);
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
 
     it("decoding an incomplete header of a string", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xda;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
@@ -332,7 +333,7 @@ describe("Serializer", () => {
     };
 
     it("encode/decode 2^16-1 bytes buffers", () => {
-      const all = [];
+      const all: any[] = [];
 
       all.push(build(Math.pow(2, 8)));
       all.push(build(Math.pow(2, 8) + 1));
@@ -340,7 +341,7 @@ describe("Serializer", () => {
       all.push(build(Math.pow(2, 16) - 1));
 
       all.forEach((orig) => {
-        assert.equal(serializer.decode(serializer.encode(orig)).toString(), orig.toString(), `buffer of length ${orig.length}`);
+        expect(serializer.decode(serializer.encode(orig)).toString()).toEqual(orig.toString());
       });
     });
 
@@ -350,15 +351,15 @@ describe("Serializer", () => {
       buf[0] = 0xc5;
       buf[1] = Math.pow(2, 16) - 1; // set bigger size
       orig.copy(buf, 3);
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
 
     it("decoding an incomplete header of 2^16-1 bytes buffer", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xc5;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
@@ -380,7 +381,7 @@ describe("Serializer", () => {
         const map = build(length, 42);
         const buf = serializer.encode(map);
 
-        assert.deepEqual(serializer.decode(buf), map, `map of length ${length} with ${map[base]}`);
+        expect(serializer.decode(buf)).toEqual(map);
       };
 
       doTest(Math.pow(2, 8));
@@ -396,20 +397,20 @@ describe("Serializer", () => {
       buf.writeUInt8(0xde);
       buf.writeUInt16BE(Math.pow(2, 16) - 1); // set bigger size
       buf.write(map.slice(3));
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
 
     it("decoding an incomplete header of a map", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xde;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("4-bytes-length-arrays", () => {
     const build = function (size) {
-      const array = [];
+      const array: any[] = [];
 
       for (let i = 0; i < size; i++) {
         array.push(42);
@@ -420,7 +421,7 @@ describe("Serializer", () => {
 
     it("encode/decode arrays up to 0xffffffff elements", () => {
       const doTest = function (array) {
-        assert.deepEqual(serializer.decode(serializer.encode(array)), array, `array of length ${array.length}`);
+        expect(serializer.decode(serializer.encode(array))).toEqual(array);
       };
 
       doTest(build(0xffff + 1));
@@ -433,19 +434,18 @@ describe("Serializer", () => {
       const buf = new SmartBuffer(5 + array.length);
       buf.writeUInt8(0xdd);
       buf.writeUInt32BE(array.length + 10); // set bigger size
-      buf.offset = 5;
       for (let i = 0; i < array.length; i++) {
         const obj = serializer.encode(array[i]);
         buf.write(obj);
       }
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
 
     it("decoding an incomplete header", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xdd;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
@@ -458,7 +458,7 @@ describe("Serializer", () => {
     };
 
     it("encode/decode 2^32-1 bytes buffers", () => {
-      const all = [];
+      const all: any = [];
 
       all.push(build(Math.pow(2, 16)));
       all.push(build(Math.pow(2, 16) + 1));
@@ -466,7 +466,7 @@ describe("Serializer", () => {
 
       all.forEach((orig) => {
         const encoded = serializer.encode(orig);
-        assert.equal(serializer.decode(encoded).toString(), orig.toString(), `buffer of length ${orig.length}`);
+        expect(serializer.decode(encoded).toString()).toEqual(orig.toString());
       });
     });
 
@@ -476,15 +476,15 @@ describe("Serializer", () => {
       buf[0] = 0xc6;
       buf[1] = Math.pow(2, 32) - 1; // set bigger size
       orig.copy(buf, 5);
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
 
     it("decoding an incomplete header of 2^32-1 bytes buffer", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xc6;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
@@ -492,7 +492,7 @@ describe("Serializer", () => {
     const serializer = new Serializer();
 
     it("encode/decode variable ext data up between 0x10000 and 0xffffffff", () => {
-      const all = [];
+      const all: any[] = [];
 
       const MyType = function (size, value) {
         this.value = value;
@@ -524,14 +524,14 @@ describe("Serializer", () => {
       all.push(new MyType(0xffffff, "a"));
 
       all.forEach((orig) => {
-        assert.deepEqual(serializer.decode(serializer.encode(orig)), orig, `custom obj of length ${orig.size}`);
+        expect(serializer.decode(serializer.encode(orig))).toEqual(orig);
       });
     });
   });
 
   describe("4-bytes-length-strings", () => {
     it("encode/decode 2^16 <-> (2^32 - 1) bytes strings", () => {
-      const all = [];
+      const all: any[] = [];
       let str;
 
       str = Buffer.allocUnsafe(Math.pow(2, 16));
@@ -547,7 +547,7 @@ describe("Serializer", () => {
       all.push(str.toString());
 
       all.forEach((str) => {
-        assert.equal(serializer.decode(serializer.encode(str)), str, `string of length ${str.length}`);
+        expect(serializer.decode(serializer.encode(str))).toEqual(str);
       });
     });
 
@@ -560,87 +560,87 @@ describe("Serializer", () => {
       buf[0] = 0xdb;
       buf.writeUInt32BE(Buffer.byteLength(str) + 10, 1); // set bigger size
       buf.write(str, 5);
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
 
     it("decoding an incomplete header of a string", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xdb;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
   it("encoding/decoding 5-bits negative ints", () => {
-    const allNum = [];
+    const allNum: any[] = [];
 
     for (let i = 1; i <= 32; i++) {
       allNum.push(-i);
     }
 
     allNum.forEach((num) => {
-      assert.equal(serializer.decode(serializer.encode(num)), num, `Number ${num}`);
+      expect(serializer.decode(serializer.encode(num))).toEqual(num);
     });
   });
 
   it("encoding/decoding 7-bits positive ints", () => {
-    const allNum = [];
+    const allNum: any[] = [];
 
     for (let i = 0; i < 126; i++) {
       allNum.push(i);
     }
 
     allNum.forEach((num) => {
-      assert.equal(serializer.decode(serializer.encode(num)), num, `Number ${num}`);
+      expect(serializer.decode(serializer.encode(num))).toEqual(num);
     });
   });
 
   describe("8-bits-positive-integers", () => {
     it("encoding/decoding 8-bits integers", () => {
-      const allNum = [];
+      const allNum: any[] = [];
 
       for (let i = 128; i < 256; i++) {
         allNum.push(i);
       }
 
       allNum.forEach((num) => {
-        assert.equal(serializer.decode(serializer.encode(num)), num, `Number ${num}`);
+        expect(serializer.decode(serializer.encode(num))).toEqual(num);
       });
     });
 
     it("decoding an incomplete 8-bits unsigned integer", () => {
       let buf = Buffer.allocUnsafe(1);
       buf[0] = 0xcc;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("8-bits-signed-integers", () => {
     it("encoding/decoding 8-bits big-endian signed integers", () => {
-      const allNum = [];
+      const allNum: any = [];
 
       for (let i = 33; i <= 128; i++) {
         allNum.push(-i);
       }
 
       allNum.forEach((num) => {
-        assert.equal(serializer.decode(serializer.encode(num)), num, `${num}`);
+        expect(serializer.decode(serializer.encode(num))).toEqual(num);
       });
     });
 
     it("decoding an incomplete 8-bits big-endian signed integer", () => {
       let buf = Buffer.allocUnsafe(1);
       buf[0] = 0xd0;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("15-elements-arrays", () => {
     const build = function (size, obj) {
-      const array = [];
+      const array: any[] = [];
       let i;
 
       for (i = 0; i < size; i++) {
@@ -651,7 +651,7 @@ describe("Serializer", () => {
     };
 
     it("encode/decode arrays up to 15 elements", () => {
-      const all = [];
+      const all: any[] = [];
       let i;
 
       for (i = 0; i < 16; i++) {
@@ -663,7 +663,7 @@ describe("Serializer", () => {
       }
 
       all.forEach((array) => {
-        assert.deepEqual(serializer.decode(serializer.encode(array)), array, `array of length ${array.length} with ${array[0]}`);
+        expect(serializer.decode(serializer.encode(array))).toEqual(array);
       });
     });
 
@@ -671,12 +671,11 @@ describe("Serializer", () => {
       const array = ["a", "b", "c"];
       const buf = new SmartBuffer();
       buf.writeUInt8(0x90 | (array.length + 2)); // set bigger size
-      buf.offset = 1;
       for (let i = 0; i < array.length; i++) {
         const obj = serializer.encode(array[i]);
         buf.write(obj);
       }
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
   });
 
@@ -693,7 +692,7 @@ describe("Serializer", () => {
     };
 
     it("encode/decode maps up to 15 elements", () => {
-      const all = [];
+      const all: any[] = [];
       let i;
 
       for (i = 0; i < 16; i++) {
@@ -706,7 +705,7 @@ describe("Serializer", () => {
 
       all.forEach((map) => {
         const length = Object.keys(map).length;
-        assert.deepEqual(serializer.decode(serializer.encode(map)), map, `map of length ${length} with ${map[100]}`);
+        expect(serializer.decode(serializer.encode(map))).toEqual(map);
       });
     });
 
@@ -715,7 +714,7 @@ describe("Serializer", () => {
       const toEncode = { a: undefined, hello: "world" };
       const buf = serializer.encode(toEncode);
 
-      assert.deepEqual(expected, serializer.decode(buf));
+      expect(expected).toEqual(serializer.decode(buf));
     });
 
     it("encode/decode map with buf, ints and strings", () => {
@@ -729,11 +728,11 @@ describe("Serializer", () => {
 
       const decodedMap = serializer.decode(serializer.encode(map));
 
-      assert.equal(map.topic, decodedMap.topic);
-      assert.equal(map.qos, decodedMap.qos);
-      assert.equal(map.messageId, decodedMap.messageId);
-      assert.equal(map.ttl, decodedMap.ttl);
-      assert.equal(Buffer.compare(map.payload, decodedMap.payload), 0);
+      expect(map.topic).toEqual(decodedMap.topic);
+      expect(map.qos).toEqual(decodedMap.qos);
+      expect(map.messageId).toEqual(decodedMap.messageId);
+      expect(map.ttl).toEqual(decodedMap.ttl);
+      expect(Buffer.compare(map.payload, decodedMap.payload)).toEqual(0);
     });
 
     it("decoding a chopped map", () => {
@@ -741,13 +740,13 @@ describe("Serializer", () => {
       const buf = new SmartBuffer(map.length);
       buf.writeUInt8(0x80 | 5); // set bigger size
       buf.write(map.slice(1));
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("16-bits-signed-integers", () => {
     it("encoding/decoding 16-bits big-endian signed integers", () => {
-      const allNum = [];
+      const allNum: any[] = [];
       let i;
 
       for (i = 129; i < 32768; i += 1423) {
@@ -757,22 +756,22 @@ describe("Serializer", () => {
       allNum.push(-32768);
 
       allNum.forEach((num) => {
-        assert.equal(serializer.decode(serializer.encode(num)), num, `${num}`);
+        expect(serializer.decode(serializer.encode(num))).toEqual(num);
       });
     });
 
     it("decoding an incomplete 16-bits big-endian integer", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xd1;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("16-bits-unsigned-integers", () => {
 
     it("encoding/decoding 16-bits big-endian unsigned integers", () => {
-      const allNum = [];
+      const allNum: any[] = [];
       let i;
 
       for (i = 256; i < 65536; i += 1423) {
@@ -782,21 +781,21 @@ describe("Serializer", () => {
       allNum.push(65535);
 
       allNum.forEach((num) => {
-        assert.equal(serializer.decode(serializer.encode(num)), num, `${num}`);
+        expect(serializer.decode(serializer.encode(num))).toEqual(num);
       });
     });
 
     it("decoding an incomplete 16-bits big-endian unsigned integer", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xcd;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("32-bits-signed-integers", () => {
     it("encoding/decoding 32-bits big-endian signed integers", () => {
-      const allNum = [];
+      const allNum: any[] = [];
 
       for (let i = 32769; i < 214748364; i += 10235023) {
         allNum.push(-i);
@@ -805,22 +804,22 @@ describe("Serializer", () => {
       allNum.push(-214748364);
 
       allNum.forEach((num) => {
-        assert.equal(serializer.decode(serializer.encode(num)), num, `${num}`);
+        expect(serializer.decode(serializer.encode(num))).toEqual(num);
       });
     });
 
     it("decoding an incomplete 32-bits big-endian integer", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xd2;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("32-bits-unsigned-integers", () => {
 
     it("encoding/decoding 32-bits big-endian unsigned integers", () => {
-      const allNum = [];
+      const allNum: any[] = [];
 
       for (let i = 65536; i < 0xffffffff; i += 102350237) {
         allNum.push(i);
@@ -830,27 +829,27 @@ describe("Serializer", () => {
       allNum.push(0xffffffff);
 
       allNum.forEach((num) => {
-        assert.equal(serializer.decode(serializer.encode(num)), num, `${num}`);
+        expect(serializer.decode(serializer.encode(num))).toEqual(num);
       });
     });
 
     it("decoding an incomplete 32-bits big-endian unsigned integer", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xce;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
   });
 
   it("encode/decode up to 31 bytes strings", () => {
-    const all = [];
+    const all: any[] = [];
 
     for (let i = ""; i.length < 32; i += "a") {
       all.push(i);
     }
 
     all.forEach((str) => {
-      assert.equal(serializer.decode(serializer.encode(str)), str, `string of length ${str.length}`);
+      expect(serializer.decode(serializer.encode(str))).toEqual(str);
     });
   });
 
@@ -866,43 +865,43 @@ describe("Serializer", () => {
       ];
 
       table.forEach((testCase) => {
-        assert.equal(serializer.decode(serializer.encode(testCase.num)), testCase.num, `${testCase.num}`);
+        expect(serializer.decode(serializer.encode(testCase.num))).toEqual(testCase.num);
       });
     });
 
     it("decoding an incomplete 64-bits big-endian signed integer", () => {
       let buf = Buffer.allocUnsafe(8);
       buf[0] = 0xd3;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("64-bits-unsigned-integers", () => {
 
     it("encoding/decoding 64-bits big-endian unsigned integers", () => {
-      const allNum = [];
+      const allNum: any[] = [];
 
       allNum.push(0x0000000100000000);
       allNum.push(0xffffffffeeeee);
 
       allNum.forEach((num) => {
-        assert.equal(serializer.decode(serializer.encode(num)), num, `${num}`);
+        expect(serializer.decode(serializer.encode(num))).toEqual(num);
       });
     });
 
     it("decoding an incomplete 64-bits big-endian unsigned integer", () => {
       let buf = Buffer.allocUnsafe(8);
       buf[0] = 0xcf;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("doubles", () => {
 
     it("encoding/decoding 64-bits float numbers", () => {
-      const allNum = [];
+      const allNum: any[] = [];
 
       allNum.push(748365544534.2);
       allNum.push(-222111111000004.2);
@@ -911,22 +910,22 @@ describe("Serializer", () => {
 
       allNum.forEach((num) => {
         const dec = serializer.decode(serializer.encode(num));
-        assert.ok(Math.abs(dec - num) < 0.1, "must decode correctly");
+        expect(Math.abs(dec - num) < 0.1).toBeTruthy();
       });
     });
 
     it("decoding an incomplete 64-bits float numbers", () => {
       let buf = Buffer.allocUnsafe(8);
       buf[0] = 0xcb;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
   });
 
   describe("fixexts", () => {
     it("encode/decode 1 byte fixext data", () => {
       const serializer = new Serializer();
-      const all = [];
+      const all: any[] = [];
 
       const MyType = function (data) {
         this.data = data;
@@ -949,13 +948,13 @@ describe("Serializer", () => {
       all.forEach((orig) => {
         const encoded = serializer.encode(orig);
         const decoded = serializer.decode(encoded);
-        assert.deepEqual(decoded, orig, `custom obj containing ${orig.data}`);
+        expect(decoded).toEqual(orig);
       });
     });
 
     it("encode/decode 2 bytes fixext data", () => {
       const serializer = new Serializer();
-      const all = [];
+      const all: any = [];
 
       const MyType = function (data) {
         this.data = data;
@@ -977,13 +976,13 @@ describe("Serializer", () => {
       all.push(new MyType(42));
 
       all.forEach((orig) => {
-        assert.deepEqual(serializer.decode(serializer.encode(orig)), orig, `custom obj containing ${orig.data}`);
+        expect(serializer.decode(serializer.encode(orig))).toEqual(orig);
       });
     });
 
     it("encode/decode 4 bytes fixext data", () => {
       const serializer = new Serializer();
-      const all = [];
+      const all: any[] = [];
 
       const MyType = function (data) {
         this.data = data;
@@ -1004,13 +1003,13 @@ describe("Serializer", () => {
       all.push(new MyType(42));
 
       all.forEach((orig) => {
-        assert.deepEqual(serializer.decode(serializer.encode(orig)), orig, `custom obj containing ${orig.data}`);
+        expect(serializer.decode(serializer.encode(orig))).toEqual(orig);
       });
     });
 
     it("encode/decode 8 bytes fixext data", () => {
       const serializer = new Serializer();
-      const all = [];
+      const all: any[] = [];
 
       const MyType = function (data) {
         this.data = data;
@@ -1032,13 +1031,13 @@ describe("Serializer", () => {
       all.push(new MyType(42));
 
       all.forEach((orig) => {
-        assert.deepEqual(serializer.decode(serializer.encode(orig)), orig, `custom obj containing ${orig.data}`);
+        expect(serializer.decode(serializer.encode(orig))).toEqual(orig);
       });
     });
 
     it("encode/decode 16 bytes fixext data", () => {
       const serializer = new Serializer();
-      const all = [];
+      const all: any[] = [];
 
       const MyType = function (data) {
         this.data = data;
@@ -1062,13 +1061,13 @@ describe("Serializer", () => {
       all.push(new MyType(44));
 
       all.forEach((orig) => {
-        assert.deepEqual(serializer.decode(serializer.encode(orig)), orig, `custom obj containing ${orig.data}`);
+        expect(serializer.decode(serializer.encode(orig))).toEqual(orig);
       });
     });
 
     it("encode/decode fixext inside a map", () => {
       const serializer = new Serializer();
-      const all = [];
+      const all: any[] = [];
 
       const MyType = function (data) {
         this.data = data;
@@ -1094,13 +1093,13 @@ describe("Serializer", () => {
 
       all.forEach((orig) => {
         const encoded = serializer.encode(orig);
-        assert.deepEqual(serializer.decode(encoded), orig, "custom obj inside a map");
+        expect(serializer.decode(encoded)).toEqual(orig);
       });
     });
 
     it("encode/decode 8 bytes fixext data", () => {
       const serializer = new Serializer();
-      const all = [];
+      const all: any[] = [];
 
       const MyType = function (data) {
         this.data = data;
@@ -1122,13 +1121,13 @@ describe("Serializer", () => {
       all.push(new MyType(42));
 
       all.forEach((orig) => {
-        assert.deepEqual(serializer.decode(serializer.encode(orig)), orig, `custom obj containing ${orig.data}`);
+        expect(serializer.decode(serializer.encode(orig))).toEqual(orig);
       });
     });
 
     it("encode/decode 16 bytes fixext data", () => {
       const serializer = new Serializer();
-      const all = [];
+      const all: any[] = [];
 
       const MyType = function (data) {
         this.data = data;
@@ -1152,7 +1151,7 @@ describe("Serializer", () => {
       all.push(new MyType(44));
 
       all.forEach((orig) => {
-        assert.deepEqual(serializer.decode(serializer.encode(orig)), orig, `custom obj containing ${orig.data}`);
+        expect(serializer.decode(serializer.encode(orig))).toEqual(orig);
       });
     });
   });
@@ -1160,7 +1159,7 @@ describe("Serializer", () => {
   describe("floats", () => {
 
     it("encoding/decoding 32-bits float numbers", () => {
-      const allNum = [];
+      const allNum: any[] = [];
 
       allNum.push(-222.42);
       allNum.push(748364.2);
@@ -1168,15 +1167,15 @@ describe("Serializer", () => {
 
       allNum.forEach((num) => {
         const dec = serializer.decode(serializer.encode(num));
-        assert.ok(Math.abs(dec - num) < 0.1, `Float ${num}`);
+        expect(Math.abs(dec - num) < 0.1).toBeTruthy();
       });
     });
 
     it("decoding an incomplete 32-bits float numbers", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xca;
-      buf = SmartBuffer.wrap(buf);
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      const sbuf = SmartBuffer.wrap(buf);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
     });
   });
 
@@ -1188,15 +1187,15 @@ describe("Serializer", () => {
       func: noop
     };
 
-    assert.throws(() => serializer.decode(serializer.encode(toEncode)), NotSupportedException);
+    expect(() => serializer.decode(serializer.encode(toEncode))).toThrow(NotSupportedException);
   });
 
   it("encode/decode undefined", () => {
-    assert.equal(serializer.decode(serializer.encode(undefined)), undefined, "mirror test undefined");
+    expect(serializer.decode(serializer.encode(undefined))).toEqual(undefined);
   });
 
   it("encode/decode null", () => {
-    assert.equal(serializer.decode(serializer.encode(null)), null, "mirror test null");
+    expect(serializer.decode(serializer.encode(null))).toEqual(null);
   });
 
   it("custom type registeration assertions", () => {
@@ -1224,19 +1223,19 @@ describe("Serializer", () => {
       return typeneg.value;
     };
 
-    assert.doesNotThrow(() => serializer.register(0, Type0, type0Decode, type0Encode), undefined, undefined, "A type registered at 0 should not throw.");
-    assert.throws(() => serializer.register(-1, TypeNeg, typeNegEncode, typeNegDecode), undefined, undefined, "A type registered as a negative value should throw");
+    expect(() => serializer.register(0, Type0, type0Decode, type0Encode)).not.toThrow();
+    expect(() => serializer.register(-1, TypeNeg, typeNegEncode, typeNegDecode)).toThrow();
 
     const encoded = serializer.encode(new Type0("hi"));
     let decoded;
-    assert.equal(encoded.readUInt8(1), 0x0, "must use the custom type assigned");
-    assert.doesNotThrow(() => decoded = serializer.decode(encoded), undefined, undefined, "decoding custom 0 type should not throw");
-    assert.equal(decoded instanceof Type0, true, "must decode to custom type instance");
+    expect(encoded.readUInt8(1)).toEqual(0x0);
+    expect(() => decoded = serializer.decode(encoded)).not.toThrow();
+    expect(decoded).toBeInstanceOf(Type0);
   });
 
   describe("object-with-arrays", () => {
     const build = function (size) {
-      const array = [];
+      const array: any[] = [];
       let i;
 
       for (i = 0; i < size; i++) {
@@ -1252,7 +1251,7 @@ describe("Serializer", () => {
         second: build(0xffff + 42)
       };
 
-      assert.deepEqual(serializer.decode(serializer.encode(map)), map);
+      expect(serializer.decode(serializer.encode(map))).toEqual(map);
     });
 
     it("decoding a map with multiple big arrays. First one is incomplete", () => {
@@ -1267,7 +1266,7 @@ describe("Serializer", () => {
       // 1 (fixmap's header 0x82) + first key's length + 1 (first array's 0xdd)
       const sizePosOfFirstArray = 1 + serializer.encode("first").length + 1;
       buf.writeUInt32BE(array.length + 10, sizePosOfFirstArray); // set first array's size bigger than its actual size
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
 
     it("decoding a map with multiple big arrays. Second one is incomplete", () => {
@@ -1281,7 +1280,7 @@ describe("Serializer", () => {
       // 1 (fixmap's header 0x82) + first key-value pair's length + second key's length + 1 (second array's 0xdd)
       const sizePosOfSecondArray = 1 + serializer.encode("first").length + serializer.encode(array).length + serializer.encode("second").length + 1;
       buf.writeUInt32BE(array.length + 10, sizePosOfSecondArray); // set second array's size bigger than its actual size
-      assert.throws(() => serializer.decode(buf), IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
     });
   });
 
@@ -1295,9 +1294,9 @@ describe("Serializer", () => {
       };
 
       const decodedMap = serializer.decode(serializer.encode(map));
-      assert.equal(Buffer.compare(decodedMap.first, map.first), 0);
-      assert.equal(Buffer.compare(decodedMap.second, map.second), 0);
-      assert.equal(Buffer.compare(decodedMap.third, map.third), 0);
+      expect(Buffer.compare(decodedMap.first, map.first)).toEqual(0);
+      expect(Buffer.compare(decodedMap.second, map.second)).toEqual(0);
+      expect(Buffer.compare(decodedMap.third, map.third)).toEqual(0);
     });
 
     it("encode/decode map with all files in this directory", () => {
@@ -1310,14 +1309,14 @@ describe("Serializer", () => {
         return acc;
       }, {});
 
-      for (const [name, buff] of ateos.util.entries(map)) {
+      for (const [name, buff] of entries(map)) {
         map[name] = Buffer.from(buff);
       }
 
       const decodedMap = serializer.decode(serializer.encode(map));
 
-      for (const [name, buff] of ateos.util.entries(map)) {
-        assert.equal(Buffer.compare(buff, decodedMap[name]), 0);
+      for (const [name, buff] of entries(map)) {
+        expect(Buffer.compare(buff, decodedMap[name])).toEqual(0);
       }
     });
   });
@@ -1331,7 +1330,7 @@ describe("Serializer", () => {
         third: "third"
       };
 
-      assert.deepEqual(serializer.decode(serializer.encode(map)), map);
+      expect(serializer.decode(serializer.encode(map))).toEqual(map);
     });
 
     it("encode/decode map with all files in this directory", () => {
@@ -1344,7 +1343,7 @@ describe("Serializer", () => {
         return acc;
       }, {});
 
-      assert.deepEqual(serializer.decode(serializer.encode(map)), map);
+      expect(serializer.decode(serializer.encode(map))).toEqual(map);
     });
   });
 
@@ -1353,19 +1352,19 @@ describe("Serializer", () => {
       let orig = Long.fromString("1152921504606912512", true); // 2**60 + 2**16
       let encoded = serializer.encode(orig);
       let output = serializer.decode(encoded);
-      assert.ok(output.equals(orig), "must stay the same");
+      expect(output.equals(orig)).toBeTruthy();
 
       orig = Long.fromString("-1152921504606912512"); // -2**60 - 2**16
       encoded = serializer.encode(orig);
       output = serializer.decode(encoded);
-      assert.ok(output.equals(orig), "must stay the same");
+      expect(output.equals(orig)).toBeTruthy();
     });
 
     it("encode/decode Date", () => {
       const val = new Date();
       const encoded = serializer.encode(val);
       const decodedVal = serializer.decode(encoded);
-      assert.deepEqual(decodedVal, val, "must stay the same");
+      expect(decodedVal).toEqual(val);
     });
 
     it("encode/decode Map", () => {
@@ -1375,7 +1374,7 @@ describe("Serializer", () => {
       val.set("state", true);
       const encoded = serializer.encode(val);
       const decodedVal = serializer.decode(encoded);
-      assert.deepEqual([...decodedVal.entries()], [...val.entries()], "must stay the same");
+      expect([...decodedVal.entries()]).toEqual([...val.entries()]);
     });
 
     it("encode/decode Set", () => {
@@ -1385,7 +1384,7 @@ describe("Serializer", () => {
       val.add("stuff");
       const encoded = serializer.encode(val);
       const decodedVal = serializer.decode(encoded);
-      assert.deepEqual([...decodedVal.entries()], [...val.entries()], "must stay the same");
+      expect([...decodedVal.entries()]).toEqual([...val.entries()]);
     });
   });
 });

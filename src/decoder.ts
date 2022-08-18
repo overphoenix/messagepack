@@ -1,9 +1,8 @@
-import { DecoderInfo } from "./types";
-import { isSmartBuffer } from "@recalibratedsystems/common";
+import { BufferType, DecoderInfo } from "./types";
 import { IncompleteBufferError } from "@recalibratedsystems/common/error";
-import SmartBuffer from "@recalibratedsystems/smartbuffer";
+import { SmartBuffer, isSmartBuffer } from "@recalibratedsystems/smartbuffer";
 
-const getSize = (first) => {
+const getSize = (first: number) => {
   switch (first) {
     case 0xc4: return 2;
     case 0xc5: return 3;
@@ -34,30 +33,31 @@ const getSize = (first) => {
   }
 };
 
-const buildDecodeResult = (value, bytesConsumed) => ({
+const buildDecodeResult = (value: any, bytesConsumed: number) => ({
   value,
   bytesConsumed
 });
 
-const isValidDataSize = (dataLength, bufLength, headerLength) => bufLength >= headerLength + dataLength;
+const isValidDataSize = (dataLength: number, bufLength: number, headerLength: number) => bufLength >= headerLength + dataLength;
 
 export default class Decoder {
   constructor(private decodingTypes: DecoderInfo[]) {
   }
 
-  decode(buf) {
-    if (!isSmartBuffer(buf)) {
-      buf = SmartBuffer.wrap(buf, undefined, true);
-    }
+  decode(buf: BufferType) {
+    const smartBuf: SmartBuffer = isSmartBuffer(buf)
+      ? buf as SmartBuffer
+      : SmartBuffer.wrap(buf, undefined, true);
 
-    const result = this.tryDecode(buf);
+
+    const result = this.tryDecode(smartBuf);
     if (result) {
       return result.value;
     }
     throw new IncompleteBufferError();
   }
 
-  tryDecode(buf) {
+  tryDecode(buf: SmartBuffer): any {
     const bufLength = buf.length;
     if (bufLength <= 0) {
       return null;
@@ -65,7 +65,7 @@ export default class Decoder {
 
     const first = buf.readUInt8();
     let length;
-    let result = 0;
+    let result: any = 0;
     let type;
     const size = getSize(first);
 
@@ -94,7 +94,7 @@ export default class Decoder {
         return buildDecodeResult(result, 5);
       case 0xcf:
         // 8-bytes BE unsigned int
-        result = buf.readUInt64BE().toNumber();
+        result = buf.readUInt64BE().toUnsigned();
         return buildDecodeResult(result, 9);
       case 0xd0:
         // 1-byte signed int
@@ -109,7 +109,7 @@ export default class Decoder {
         result = buf.readInt32BE();
         return buildDecodeResult(result, 5);
       case 0xd3:
-        result = buf.readInt64BE();
+        result = buf.readInt64BE().toInt();
         return buildDecodeResult(result, 9);
       case 0xca:
         // 4-bytes float
@@ -260,8 +260,8 @@ export default class Decoder {
     throw new Error("Not implemented yet");
   }
 
-  _decodeMap(buf, length, headerLength) {
-    const result = {};
+  _decodeMap(buf: SmartBuffer, length: number, headerLength: number) {
+    const result: any = {};
     let key;
     let totalBytesConsumed = 0;
 
@@ -283,7 +283,7 @@ export default class Decoder {
     return buildDecodeResult(result, headerLength + totalBytesConsumed);
   }
 
-  _decodeArray(buf, length, headerLength) {
+  _decodeArray(buf: SmartBuffer, length: number, headerLength: number) {
     const result: any[] = [];
     let totalBytesConsumed = 0;
 
@@ -299,12 +299,12 @@ export default class Decoder {
     return buildDecodeResult(result, headerLength + totalBytesConsumed);
   }
 
-  _decodeFixExt(buf, size) {
+  _decodeFixExt(buf: SmartBuffer, size: number) {
     const type = buf.readUInt8();
     return this._decodeExt(buf, type, size, 2);
   }
 
-  _decodeExt(buf, type, size, headerSize) {
+  _decodeExt(buf: SmartBuffer, type: number, size: number, headerSize: number) {
     const decTypes = this.decodingTypes;
     for (let i = 0; i < decTypes.length; ++i) {
       if (type === decTypes[i].type) {

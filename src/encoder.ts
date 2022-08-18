@@ -1,4 +1,4 @@
-import SmartBuffer from "@recalibratedsystems/smartbuffer";
+import { SmartBuffer } from "@recalibratedsystems/smartbuffer";
 import { Buffer } from "buffer";
 import { BufferType, EncoderInfo } from "./types";
 import { isArray, isBuffer, isPlainObject, isString } from "@recalibratedsystems/common";
@@ -10,13 +10,13 @@ export default class Encoder {
   constructor(private encodingTypes: EncoderInfo[]) {
   }
 
-  encode(x: any, buf?: BufferType) {
+  encode(x: any, buf?: SmartBuffer) {
     buf = buf || new SmartBuffer(1024, true);
     this._encode(x, buf);
     return buf;
   }
 
-  private _encode(x, buf) {
+  private _encode(x: any, buf: SmartBuffer): void {
     const type = typeof (x);
     switch (type) {
       case "undefined": {
@@ -122,7 +122,7 @@ export default class Encoder {
           for (let i = 0; i < encTypes.length; ++i) {
             if (encTypes[i].check(x)) {
               const extType: EncoderInfo = encTypes[i];
-              const encoded = extType.encode(x);
+              const encoded = extType.encode(x, buf);
 
               const length = encoded.length;
               if (length === 1) {
@@ -157,7 +157,7 @@ export default class Encoder {
     }
   }
 
-  private encodeString(x, buf) {
+  private encodeString(x: any, buf: SmartBuffer) {
     const len = Buffer.byteLength(x);
     if (len < 32) {
       buf.writeInt8(0xA0 | len);

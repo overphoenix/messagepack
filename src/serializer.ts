@@ -1,4 +1,4 @@
-import SmartBuffer from "@recalibratedsystems/smartbuffer";
+import { SmartBuffer } from "@recalibratedsystems/smartbuffer";
 import Encoder from "./encoder";
 import Decoder from "./decoder";
 import { BufferType, EncoderInfo, DecoderInfo, DecodeFunction, EncodeFunction } from "./types";
@@ -39,7 +39,7 @@ export default class Serializer {
     return this;
   }
 
-  encode(x: any, buf?: BufferType) {
+  encode(x: any, buf?: SmartBuffer) {
     return this.encoder.encode(x, buf);
   }
 
