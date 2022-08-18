@@ -94,7 +94,7 @@ export default class Decoder {
         return buildDecodeResult(result, 5);
       case 0xcf:
         // 8-bytes BE unsigned int
-        result = buf.readUInt64BE().toUnsigned();
+        result = buf.readUInt64BE().toNumber();
         return buildDecodeResult(result, 9);
       case 0xd0:
         // 1-byte signed int
@@ -109,7 +109,7 @@ export default class Decoder {
         result = buf.readInt32BE();
         return buildDecodeResult(result, 5);
       case 0xd3:
-        result = buf.readInt64BE().toInt();
+        result = buf.readInt64BE().toNumber();
         return buildDecodeResult(result, 9);
       case 0xca:
         // 4-bytes float
