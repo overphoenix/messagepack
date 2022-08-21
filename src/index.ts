@@ -2,7 +2,7 @@
 import Long from "long";
 import Serializer from "./serializer";
 import { BufferType } from "./types";
-import { Exception, createError, getStdErroId } from "@recalibratedsystems/common/error";
+import { Exception, createError, getStdErrorId } from "@recalibratedsystems/common";
 import { SmartBuffer } from "@recalibratedsystems/smartbuffer";
 
 export const registerCommonTypesFor = (s: Serializer) => {
@@ -46,7 +46,7 @@ export const registerCommonTypesFor = (s: Serializer) => {
 
   // Std exceptions encoders/decoders
   s.register(126, Error, (obj: any, buf: SmartBuffer) => {
-    buf.writeUInt16BE(getStdErroId(obj));
+    buf.writeUInt16BE(getStdErrorId(obj));
     s.encode(obj.stack, buf);
     s.encode(obj.message, buf);
   }, decodeException);

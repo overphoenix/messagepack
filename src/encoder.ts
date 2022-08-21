@@ -2,9 +2,7 @@ import { SmartBuffer } from "@recalibratedsystems/smartbuffer";
 import { Buffer } from "buffer";
 import { BufferType, EncoderInfo } from "./types";
 import { isArray, isBuffer, isPlainObject, isString } from "@recalibratedsystems/common";
-import { NotSupportedException } from "@recalibratedsystems/common/error";
-import typeOf from "@recalibratedsystems/common/typeof";
-
+import { typeOf, NotSupportedException } from "@recalibratedsystems/common";
 
 export default class Encoder {
   constructor(private encodingTypes: EncoderInfo[]) {

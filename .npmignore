@@ -1,2 +1,5 @@
 src
 tests
+tsconfig.json
+tsconfig.types.json
+.swcrc

@@ -1,5 +1,4 @@
-import { entries } from "@recalibratedsystems/common/entries";
-import { NotSupportedException, IncompleteBufferError } from "@recalibratedsystems/common/error";
+import { entries, NotSupportedException, IncompleteBufferException } from "@recalibratedsystems/common";
 import { Serializer, serializer } from "../lib";
 import Long from "long";
 import * as fs from "fs";
@@ -54,7 +53,7 @@ describe("Serializer", () => {
       orig.copy(buf, 2);
       const sbuf = SmartBuffer.wrap(buf);
       const origLength = sbuf.length;
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
       expect(sbuf.length).toEqual(origLength - 2);
     });
 
@@ -63,7 +62,7 @@ describe("Serializer", () => {
       buf[0] = 0xc4;
       const sbuf = SmartBuffer.wrap(buf);
       const origLength = sbuf.length;
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
       expect(sbuf.length).toEqual(origLength - 1);
     });
   });
@@ -134,14 +133,14 @@ describe("Serializer", () => {
       buf.writeUInt8(length + 2, 1); // set bigger size
       obj.buffer.copy(buf, 2, 2, length);
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
 
     it("decoding an incomplete header of variable ext data up to 0xff", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xc7;
       const sbuf = new SmartBuffer().write(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -174,14 +173,14 @@ describe("Serializer", () => {
       buf[1] = Buffer.byteLength(str) + 10; // set bigger size
       buf.write(str, 2);
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
 
     it("decoding an incomplete header of a string", () => {
       let buf = Buffer.allocUnsafe(1);
       buf[0] = 0xd9;
       const sbuf = new SmartBuffer().write(buf);
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -226,14 +225,14 @@ describe("Serializer", () => {
         pos += obj.length;
       }
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
 
     it("decoding an incomplete header", () => {
       let buf = Buffer.alloc(2);
       buf[0] = 0xdc;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -313,14 +312,14 @@ describe("Serializer", () => {
       buf.writeUInt16BE(Buffer.byteLength(str) + 10, 1); // set bigger size
       buf.write(str, 3);
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
 
     it("decoding an incomplete header of a string", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xda;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -352,14 +351,14 @@ describe("Serializer", () => {
       buf[1] = Math.pow(2, 16) - 1; // set bigger size
       orig.copy(buf, 3);
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
 
     it("decoding an incomplete header of 2^16-1 bytes buffer", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xc5;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -397,14 +396,14 @@ describe("Serializer", () => {
       buf.writeUInt8(0xde);
       buf.writeUInt16BE(Math.pow(2, 16) - 1); // set bigger size
       buf.write(map.slice(3));
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
 
     it("decoding an incomplete header of a map", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xde;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -438,14 +437,14 @@ describe("Serializer", () => {
         const obj = serializer.encode(array[i]);
         buf.write(obj);
       }
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
 
     it("decoding an incomplete header", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xdd;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -477,14 +476,14 @@ describe("Serializer", () => {
       buf[1] = Math.pow(2, 32) - 1; // set bigger size
       orig.copy(buf, 5);
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
 
     it("decoding an incomplete header of 2^32-1 bytes buffer", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xc6;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -561,14 +560,14 @@ describe("Serializer", () => {
       buf.writeUInt32BE(Buffer.byteLength(str) + 10, 1); // set bigger size
       buf.write(str, 5);
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
 
     it("decoding an incomplete header of a string", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xdb;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -613,7 +612,7 @@ describe("Serializer", () => {
       let buf = Buffer.allocUnsafe(1);
       buf[0] = 0xcc;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -634,7 +633,7 @@ describe("Serializer", () => {
       let buf = Buffer.allocUnsafe(1);
       buf[0] = 0xd0;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -675,7 +674,7 @@ describe("Serializer", () => {
         const obj = serializer.encode(array[i]);
         buf.write(obj);
       }
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -740,7 +739,7 @@ describe("Serializer", () => {
       const buf = new SmartBuffer(map.length);
       buf.writeUInt8(0x80 | 5); // set bigger size
       buf.write(map.slice(1));
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -764,7 +763,7 @@ describe("Serializer", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xd1;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -789,7 +788,7 @@ describe("Serializer", () => {
       let buf = Buffer.allocUnsafe(2);
       buf[0] = 0xcd;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -812,7 +811,7 @@ describe("Serializer", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xd2;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -837,7 +836,7 @@ describe("Serializer", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xce;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -873,7 +872,7 @@ describe("Serializer", () => {
       let buf = Buffer.allocUnsafe(8);
       buf[0] = 0xd3;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -894,7 +893,7 @@ describe("Serializer", () => {
       let buf = Buffer.allocUnsafe(8);
       buf[0] = 0xcf;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -918,7 +917,7 @@ describe("Serializer", () => {
       let buf = Buffer.allocUnsafe(8);
       buf[0] = 0xcb;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -1175,7 +1174,7 @@ describe("Serializer", () => {
       let buf = Buffer.allocUnsafe(4);
       buf[0] = 0xca;
       const sbuf = SmartBuffer.wrap(buf);
-      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(sbuf)).toThrow(IncompleteBufferException);
     });
   });
 
@@ -1266,7 +1265,7 @@ describe("Serializer", () => {
       // 1 (fixmap's header 0x82) + first key's length + 1 (first array's 0xdd)
       const sizePosOfFirstArray = 1 + serializer.encode("first").length + 1;
       buf.writeUInt32BE(array.length + 10, sizePosOfFirstArray); // set first array's size bigger than its actual size
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
 
     it("decoding a map with multiple big arrays. Second one is incomplete", () => {
@@ -1280,7 +1279,7 @@ describe("Serializer", () => {
       // 1 (fixmap's header 0x82) + first key-value pair's length + second key's length + 1 (second array's 0xdd)
       const sizePosOfSecondArray = 1 + serializer.encode("first").length + serializer.encode(array).length + serializer.encode("second").length + 1;
       buf.writeUInt32BE(array.length + 10, sizePosOfSecondArray); // set second array's size bigger than its actual size
-      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferError);
+      expect(() => serializer.decode(buf)).toThrow(IncompleteBufferException);
     });
   });
 

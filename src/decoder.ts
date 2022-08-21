@@ -1,5 +1,5 @@
 import { BufferType, DecoderInfo } from "./types";
-import { IncompleteBufferError } from "@recalibratedsystems/common/error";
+import { IncompleteBufferException } from "@recalibratedsystems/common";
 import { SmartBuffer, isSmartBuffer } from "@recalibratedsystems/smartbuffer";
 
 const getSize = (first: number) => {
@@ -54,7 +54,7 @@ export default class Decoder {
     if (result) {
       return result.value;
     }
-    throw new IncompleteBufferError();
+    throw new IncompleteBufferException("Incomplete buffer");
   }
 
   tryDecode(buf: SmartBuffer): any {
