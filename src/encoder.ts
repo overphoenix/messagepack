@@ -1,8 +1,27 @@
 import { SmartBuffer } from "@recalibratedsystems/smartbuffer";
 import { Buffer } from "buffer";
-import { BufferType, EncoderInfo } from "./types";
+import { EncoderInfo } from "./types";
 import { isArray, isBuffer, isPlainObject, isString } from "@recalibratedsystems/common";
 import { typeOf, NotSupportedException } from "@recalibratedsystems/common";
+
+const encodeString = (x: any, buf: SmartBuffer) => {
+  const len = Buffer.byteLength(x);
+  if (len < 32) {
+    buf.writeInt8(0xA0 | len);
+    if (len === 0) {
+      return;
+    }
+  } else if (len <= 0xFF) {
+    buf.writeUInt16BE(0xD900 | len);
+  } else if (len <= 0xFFFF) {
+    buf.writeInt8(0xDA);
+    buf.writeUInt16BE(len);
+  } else {
+    buf.writeInt8(0xDB);
+    buf.writeUInt32BE(len);
+  }
+  buf.write(x, undefined, len);
+}
 
 export default class Encoder {
   constructor(private encodingTypes: EncoderInfo[]) {
@@ -27,7 +46,7 @@ export default class Encoder {
         break;
       }
       case "string": {
-        this.encodeString(x, buf);
+        encodeString(x, buf);
         break;
       }
       case "number": {
@@ -112,7 +131,7 @@ export default class Encoder {
           }
 
           for (const key of keys) {
-            this.encodeString(key, buf);
+            encodeString(key, buf);
             this._encode(x[key], buf);
           }
         } else { // try extensions
@@ -153,24 +172,5 @@ export default class Encoder {
         }
       }
     }
-  }
-
-  private encodeString(x: any, buf: SmartBuffer) {
-    const len = Buffer.byteLength(x);
-    if (len < 32) {
-      buf.writeInt8(0xA0 | len);
-      if (len === 0) {
-        return;
-      }
-    } else if (len <= 0xFF) {
-      buf.writeUInt16BE(0xD900 | len);
-    } else if (len <= 0xFFFF) {
-      buf.writeInt8(0xDA);
-      buf.writeUInt16BE(len);
-    } else {
-      buf.writeInt8(0xDB);
-      buf.writeUInt32BE(len);
-    }
-    buf.write(x, undefined, len);
   }
 }

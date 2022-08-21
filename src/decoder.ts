@@ -180,7 +180,7 @@ export default class Decoder {
         }
 
         length = buf.readUInt16BE();
-        return this._decodeArray(buf, length, 3);
+        return this.decodeArray(buf, length, 3);
       case 0xdd:
         // array up to 2^32 elements - 4 bytes
         if (bufLength < 5) {
@@ -188,23 +188,23 @@ export default class Decoder {
         }
 
         length = buf.readUInt32BE();
-        return this._decodeArray(buf, length, 5);
+        return this.decodeArray(buf, length, 5);
       case 0xde:
         // maps up to 2^16 elements - 2 bytes
         length = buf.readUInt16BE();
-        return this._decodeMap(buf, length, 3);
+        return this.decodeMap(buf, length, 3);
       case 0xdf:
         throw new Error("map too big to decode in JS");
       case 0xd4:
-        return this._decodeFixExt(buf, 1);
+        return this.decodeFixExt(buf, 1);
       case 0xd5:
-        return this._decodeFixExt(buf, 2);
+        return this.decodeFixExt(buf, 2);
       case 0xd6:
-        return this._decodeFixExt(buf, 4);
+        return this.decodeFixExt(buf, 4);
       case 0xd7:
-        return this._decodeFixExt(buf, 8);
+        return this.decodeFixExt(buf, 8);
       case 0xd8:
-        return this._decodeFixExt(buf, 16);
+        return this.decodeFixExt(buf, 16);
       case 0xc7:
         // ext up to 2^8 - 1 bytes
         length = buf.readUInt8();
@@ -212,7 +212,7 @@ export default class Decoder {
         if (!isValidDataSize(length, bufLength, 3)) {
           return null;
         }
-        return this._decodeExt(buf, type, length, 3);
+        return this.decodeExt(buf, type, length, 3);
       case 0xc8:
         // ext up to 2^16 - 1 bytes
         length = buf.readUInt16BE();
@@ -220,7 +220,7 @@ export default class Decoder {
         if (!isValidDataSize(length, bufLength, 4)) {
           return null;
         }
-        return this._decodeExt(buf, type, length, 4);
+        return this.decodeExt(buf, type, length, 4);
       case 0xc9:
         // ext up to 2^32 - 1 bytes
         length = buf.readUInt32BE();
@@ -228,17 +228,17 @@ export default class Decoder {
         if (!isValidDataSize(length, bufLength, 6)) {
           return null;
         }
-        return this._decodeExt(buf, type, length, 6);
+        return this.decodeExt(buf, type, length, 6);
     }
 
     if ((first & 0xf0) === 0x90) {
       // we have an array with less than 15 elements
       length = first & 0x0f;
-      return this._decodeArray(buf, length, 1);
+      return this.decodeArray(buf, length, 1);
     } else if ((first & 0xf0) === 0x80) {
       // we have a map with less than 15 elements
       length = first & 0x0f;
-      return this._decodeMap(buf, length, 1);
+      return this.decodeMap(buf, length, 1);
     } else if ((first & 0xe0) === 0xa0) {
       // fixstr up to 31 bytes
       length = first & 0x1f;
@@ -260,7 +260,7 @@ export default class Decoder {
     throw new Error("Not implemented yet");
   }
 
-  _decodeMap(buf: SmartBuffer, length: number, headerLength: number) {
+  private decodeMap(buf: SmartBuffer, length: number, headerLength: number) {
     const result: any = {};
     let key;
     let totalBytesConsumed = 0;
@@ -283,7 +283,7 @@ export default class Decoder {
     return buildDecodeResult(result, headerLength + totalBytesConsumed);
   }
 
-  _decodeArray(buf: SmartBuffer, length: number, headerLength: number) {
+  private decodeArray(buf: SmartBuffer, length: number, headerLength: number) {
     const result: any[] = [];
     let totalBytesConsumed = 0;
 
@@ -299,12 +299,12 @@ export default class Decoder {
     return buildDecodeResult(result, headerLength + totalBytesConsumed);
   }
 
-  _decodeFixExt(buf: SmartBuffer, size: number) {
+  private decodeFixExt(buf: SmartBuffer, size: number) {
     const type = buf.readUInt8();
-    return this._decodeExt(buf, type, size, 2);
+    return this.decodeExt(buf, type, size, 2);
   }
 
-  _decodeExt(buf: SmartBuffer, type: number, size: number, headerSize: number) {
+  private decodeExt(buf: SmartBuffer, type: number, size: number, headerSize: number) {
     const decTypes = this.decodingTypes;
     for (let i = 0; i < decTypes.length; ++i) {
       if (type === decTypes[i].type) {

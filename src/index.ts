@@ -113,4 +113,3 @@ registerCommonTypesFor(serializer);
 export const encode = (obj: any) => serializer.encode(obj).toBuffer();
 export const decode = (buf: BufferType) => serializer.decode(buf);
 export const tryDecode = (buf: SmartBuffer) => serializer.decoder.tryDecode(buf);
-export const any = true;

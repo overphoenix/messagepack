@@ -1,7 +1,7 @@
 {
   "name": "@recalibratedsystems/messagepack",
-  "version": "1.2.0",
-  "description": "MessagePack serializer",
+  "version": "1.2.1",
+  "description": "Extandable MessagePack serializer",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "scripts": {
@@ -9,6 +9,10 @@
     "build:types": "tsc -p tsconfig.types.json",
     "test": "jest"
   },
+  "keywords": [
+    "MessagePack",
+    "msgpack"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/overphoenix/messagepack.git"
