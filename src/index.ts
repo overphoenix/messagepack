@@ -2,7 +2,7 @@
 import Long from "long";
 import Serializer from "./serializer";
 import { BufferType } from "./types";
-import { Exception, createError, getStdErrorId } from "@recalibratedsystems/common";
+import { Exception, createError, getStdErrorId } from "@recalibratedsystems/common-cjs";
 import { SmartBuffer } from "@recalibratedsystems/smartbuffer";
 
 export const registerCommonTypesFor = (s: Serializer) => {

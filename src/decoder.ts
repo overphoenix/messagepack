@@ -1,5 +1,5 @@
 import { BufferType, DecoderInfo } from "./types";
-import { IncompleteBufferException } from "@recalibratedsystems/common";
+import { IncompleteBufferException } from "@recalibratedsystems/common-cjs";
 import { SmartBuffer, isSmartBuffer } from "@recalibratedsystems/smartbuffer";
 
 const getSize = (first: number) => {

@@ -1,8 +1,7 @@
 import { SmartBuffer } from "@recalibratedsystems/smartbuffer";
 import { Buffer } from "buffer";
 import { EncoderInfo } from "./types";
-import { isArray, isBuffer, isPlainObject, isString } from "@recalibratedsystems/common";
-import { typeOf, NotSupportedException } from "@recalibratedsystems/common";
+import { typeOf, NotSupportedException, isArray, isBuffer, isPlainObject, isString } from "@recalibratedsystems/common-cjs";
 
 const encodeString = (x: any, buf: SmartBuffer) => {
   const len = Buffer.byteLength(x);

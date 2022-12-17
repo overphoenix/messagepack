@@ -1,4 +1,4 @@
-import { entries, NotSupportedException, IncompleteBufferException } from "@recalibratedsystems/common";
+import { entries, NotSupportedException, IncompleteBufferException } from "@recalibratedsystems/common-cjs";
 import { Serializer, serializer } from "../lib";
 import Long from "long";
 import * as fs from "fs";
